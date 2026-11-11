@@ -142,6 +142,13 @@ class AnswerEngine:
         }
 
     def close(self) -> None:
+        """Stop a router this process started, and release the provider session.
+
+        Only a router the supervisor spawned is stopped; one the user launched by
+        hand is left running.
+        """
+        if self.router is not None:
+            self.router.stop()
         self.registry.close()
 
     # -- stages ---------------------------------------------------------
