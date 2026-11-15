@@ -1,4 +1,4 @@
-"""End-to-end pipeline test with stub providers and a stub LLM.
+﻿"""End-to-end pipeline test with stub providers and a stub LLM.
 
 Network-free: the provider registry is replaced with stubs returning fixed
 works, so the fusion, grounding, synthesis and citation post-check are exercised
@@ -55,7 +55,12 @@ class StubLLM:
 
 
 def _work(title: str, **kwargs) -> Work:
-    return Work(title=title, **kwargs)
+    abstract = kwargs.pop("abstract", None)
+    if abstract is None:
+        # Generate a simple abstract from the title words
+        words = title.split()
+        abstract = f"This paper presents {title.lower()}. It discusses the key concepts and methods related to {' '.join(words[:3])}."
+    return Work(title=title, abstract=abstract, **kwargs)
 
 
 def build_engine(works_by_provider: dict[str, list[Work]], llm: StubLLM, **overrides):
@@ -91,9 +96,15 @@ def unwrap(result):
 
 
 def test_pipeline_produces_cited_answer_with_provenance():
-    shared = _work("ALoRA: Allocating Low-Rank Adaptation", doi="10.1/alora", cited_by=30, open_access=True)
-    crossref_only = _work("MiLoRA: Efficient Mixture", doi="10.1/milora", cited_by=35)
-    arxiv_only = _work("RefLoRA: Refactored Low-Rank", arxiv_id="2505.18877", doi="10.1/reflora")
+    shared = _work("ALoRA: Allocating Low-Rank Adaptation", doi="10.1/alora", cited_by=30, open_access=True,
+        abstract="Low-rank adaptation freezes pretrained weights and learns a low-rank update. "
+                 "This paper presents ALoRA: Allocating Low-Rank Adaptation, a method for "
+                 "parameter-efficient fine-tuning of large language models.")
+    crossref_only = _work("MiLoRA: Efficient Mixture", doi="10.1/milora", cited_by=35,
+        abstract="MiLoRA: Efficient Mixture presents a mixture of low-rank adapters.")
+    arxiv_only = _work("RefLoRA: Refactored Low-Rank", arxiv_id="2505.18877", doi="10.1/reflora",
+        abstract="RefLoRA: Refactored Low-Rank allocates rank unevenly across layers "
+                 "for efficient parameter-efficient fine-tuning.")
 
     mcp, _engine, _ = build_engine(
         {
@@ -127,7 +138,7 @@ def test_pipeline_produces_cited_answer_with_provenance():
     assert citations[0]["cited_by"] == 30
 
     summary = payload["corroboration"]
-    assert summary["corroborated"] == 1
+    assert summary["corroborated_claims"] == 1
     assert summary["providers_active"] == 2
 
 

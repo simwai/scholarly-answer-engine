@@ -12,7 +12,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from .models import Citation, Work
+from ..models import Citation, Work
 
 _CITATION = re.compile(r"\[(\d+(?:\s*,\s*\d+)*)\]")
 _SENTENCE = re.compile(r"(?<=[.!?])\s+")

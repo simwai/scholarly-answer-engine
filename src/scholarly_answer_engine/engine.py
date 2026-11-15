@@ -23,6 +23,7 @@ from .synth.inline_client import InlineChainClient
 from .synth.prompts import build_synthesis_user
 from .synth.router_client import RouterClient
 from .synthesis import add_citation_numbers, post_check
+from .synthesis.cross_validation import augment_with_corroboration
 
 logger = logging.getLogger(__name__)
 
@@ -105,22 +106,37 @@ class AnswerEngine:
         answer = add_citation_numbers(answer, selected)
         claims, warnings = post_check(answer, selected)
 
+        # Build citation objects before cross-validation so we can map
+        # claim citations back to source works.
+        citation_list = [w.to_citation(i) for i, w in enumerate(selected, start=1)]
+
+        # Claim-level cross-validation: run each answer claim against the
+        # underlying full-text sources and count distinct engines that agree.
+        # This replaces the old snippet-level count with actual textual
+        # corroboration.
+        answer, claims, summary = augment_with_corroboration(
+            answer, citation_list, selected
+        )
+
         for provider in failed_providers:
             warnings.append(f"provider returned no results: {provider}")
 
-        # Claim-level corroboration: how many of the answer's assertions rest on
-        # sources that more than one independent provider returned.
-        cited_claims = [c for c in claims if c.citations]
-        summary = corroboration_summary(selected)
-        summary["claims_total"] = len(claims)
-        summary["claims_cited"] = len(cited_claims)
-        summary["claims_corroborated"] = sum(1 for c in cited_claims if c.corroborated)
+        # Merge corroboration summary into the output dict.
+        corroboration_summary = {
+            "total_claims": summary.total_claims,
+            "corroborated_claims": summary.corroborated_claims,
+            "single_source_claims": summary.single_source_claims,
+            "corroborated_percentage": summary.corroboration_percentage,
+            "contradicted_claims": summary.contradicted_claims,
+            "engine_agreement": summary.engine_agreement,
+            "providers_active": summary.providers_active,
+        }
 
         outcome = SearchOutcome(
             answer=answer,
-            citations=[w.to_citation(i) for i, w in enumerate(selected, start=1)],
+            citations=citation_list,
             sources=self._source_payload(selected),
-            corroboration=summary,
+            corroboration=corroboration_summary,
             model_used=self.llm.last_model_used or "",
             from_fallback=self.llm.last_from_fallback,
             cached=False,
