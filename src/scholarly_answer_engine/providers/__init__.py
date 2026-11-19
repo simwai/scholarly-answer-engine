@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import logging
-from collections.abc import Callable
+from typing import Callable
 
 from ..config import Config
 from ..models import Work
@@ -15,7 +15,6 @@ from .crossref import CrossrefProvider
 from .europepmc import EuropePmcProvider
 from .openalex import OpenAlexProvider
 from .semanticscholar import SemanticScholarProvider
-from .unpaywall import UnpaywallProvider
 
 logger = logging.getLogger(__name__)
 
@@ -40,18 +39,23 @@ class ProviderRegistry:
             self.europepmc = None
 
         if config.enable_semantic_scholar:
-            self.providers["semanticscholar"] = SemanticScholarProvider(self.session, self.throttle, self.timeout)
-
-        self.unpaywall = UnpaywallProvider(self.session, self.throttle, self.timeout, config.contact_email)
-        self.openalex: OpenAlexProvider | None = (
-            OpenAlexProvider(self.session, self.throttle, self.timeout) if config.openalex_enabled else None
-        )
+            self.providers["semanticscholar"] = SemanticScholarProvider(
+                self.session, self.throttle, self.timeout
+            )
+        if config.openalex_enabled:
+            self.providers["openalex"] = OpenAlexProvider(
+                self.session, self.throttle, self.timeout
+            )
 
     def _build(self, name: str) -> BaseProvider | None:
         maker: dict[str, Callable[[], BaseProvider]] = {
-            "crossref": lambda: CrossrefProvider(self.session, self.throttle, self.timeout, self.config.contact_email),
+            "crossref": lambda: CrossrefProvider(
+                self.session, self.throttle, self.timeout, self.config.contact_email
+            ),
             "arxiv": lambda: ArxivProvider(self.session, self.throttle, self.timeout),
-            "europepmc": lambda: EuropePmcProvider(self.session, self.throttle, self.timeout),
+            "europepmc": lambda: EuropePmcProvider(
+                self.session, self.throttle, self.timeout
+            ),
         }
         factory = maker.get(name)
         if factory is None:
@@ -72,7 +76,9 @@ class ProviderRegistry:
         results: list[Work] = []
         failed: list[str] = []
 
-        def run(name: str, provider: BaseProvider) -> tuple[str, list[Work] | None, str | None]:
+        def run(
+            name: str, provider: BaseProvider
+        ) -> tuple[str, list[Work] | None, str | None]:
             try:
                 # Each provider adapts the question to its own query language.
                 query = provider.build_query(query_text)
@@ -84,8 +90,13 @@ class ProviderRegistry:
                 logger.exception("provider %s crashed", name)
                 return name, None, f"{type(exc).__name__}: {exc}"
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(self.providers))) as pool:
-            futures = {pool.submit(run, name, provider): name for name, provider in self.providers.items()}
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=max(1, len(self.providers))
+        ) as pool:
+            futures = {
+                pool.submit(run, name, provider): name
+                for name, provider in self.providers.items()
+            }
             for future in concurrent.futures.as_completed(futures):
                 # A provider failing is recorded, never raised; third slot unused.
                 name, works, _error = future.result()

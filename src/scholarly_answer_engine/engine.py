@@ -32,7 +32,7 @@ class AnswerEngine:
     def __init__(self, config: Config) -> None:
         self.config = config.sanitized()
         self.registry = ProviderRegistry(self.config)
-        self.fulltext = FullTextResolver(self.config, self.registry.europepmc, self.registry.unpaywall)
+        self.fulltext = FullTextResolver(self.config, self.registry.europepmc)
         self.cache = ResponseCache(self.config)
         self.router: RouterSupervisor | None = None
         self.llm = self._build_llm()

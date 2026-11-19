@@ -8,7 +8,6 @@ evidence.
 Open-access sources, in preference order:
   1. Europe PMC fullTextXML (OA subset) - XML, cleanest to parse
   2. arXiv PDF - parsed locally
-  3. Unpaywall-resolved OA PDF - parsed locally
 Anything without a legal open copy stays at ``grounding: abstract``.
 """
 
@@ -22,7 +21,6 @@ import requests
 from ..config import Config
 from ..models import Work
 from ..providers.europepmc import EuropePmcProvider
-from ..providers.unpaywall import UnpaywallProvider
 from .pdftext import extract_pdf_text
 
 logger = logging.getLogger(__name__)
@@ -31,10 +29,9 @@ _PDF_MAGIC = b"%PDF"
 
 
 class FullTextResolver:
-    def __init__(self, config: Config, europepmc: EuropePmcProvider, unpaywall: UnpaywallProvider) -> None:
+    def __init__(self, config: Config, europepmc: EuropePmcProvider) -> None:
         self.config = config
         self.europepmc = europepmc
-        self.unpaywall = unpaywall
         self._session = requests.Session()
         self._session.headers.update({"User-Agent": "scholarly-answer-engine/0.1 (OA full text)"})
 
@@ -49,7 +46,7 @@ class FullTextResolver:
 
     def _resolve_one(self, work: Work) -> None:
         """Try each open-access source in order; never raises."""
-        for attempt in (self._from_europe_pmc, self._from_arxiv, self._from_unpaywall):
+        for attempt in (self._from_europe_pmc, self._from_arxiv):
             try:
                 text = attempt(work)
             except Exception as exc:  # noqa: BLE001 - a failed OA fetch must not abort the answer
@@ -71,16 +68,6 @@ class FullTextResolver:
         if not work.arxiv_id or not work.open_access:
             return None
         url = f"https://arxiv.org/pdf/{work.arxiv_id}.pdf"
-        return self._fetch_pdf_text(url)
-
-    def _from_unpaywall(self, work: Work) -> str | None:
-        if not work.doi:
-            return None
-        if work.oa_url and not work.pmcid and not work.arxiv_id:
-            return self._fetch_pdf_text(work.oa_url)
-        url = self.unpaywall.oa_pdf_url(work.doi)
-        if not url:
-            return None
         return self._fetch_pdf_text(url)
 
     def _fetch_pdf_text(self, url: str) -> str | None:

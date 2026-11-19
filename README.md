@@ -23,8 +23,6 @@ guess.
 | Crossref | none (mailto → polite pool) | authoritative DOI metadata + citation counts |
 | arXiv | none | Atom XML; keyword-built boolean queries |
 | Europe PMC | none | 40M+ works; **open-access full-text XML** |
-| Unpaywall | real email only | resolve a lawful OA PDF per DOI |
-| OpenAlex | none | **DOI singleton lookups only** (`search=` is metered since 2026-02) |
 | Semantic Scholar | none | optional, off by default |
 
 Providers are queried in parallel and fused with **RRF** (`k=60`), because their
@@ -41,7 +39,7 @@ corroborated across providers. The trigger is computed from results already in
 hand, so no LLM call is spent deciding.
 
 **Open-access full text** is resolved from Europe PMC XML, arXiv PDFs parsed
-locally, and Unpaywall-resolved OA PDFs. Papers without a legal open copy stay at
+locally, and mark sources as partial
 `grounding: abstract` and are marked as such, so the depth of evidence behind
 each claim is visible.
 
@@ -137,7 +135,7 @@ empty answer.
 
 | Var | Default | Meaning |
 |---|---|---|
-| `SEARCH_CONTACT_EMAIL` | `research@example.invalid` | contact for Crossref/Unpaywall polite pools |
+| `SEARCH_CONTACT_EMAIL` | `research@example.invalid` | contact for Crossref's polite pools |
 | `SEARCH_ENGINES` | `crossref,arxiv,europepmc` | providers to query |
 | `SEARCH_MAX_SOURCES` | `5` | sources grounded into the answer |
 | `PER_PROVIDER_LIMIT` | `15` | results fetched per provider |
@@ -169,7 +167,7 @@ providers/           isolated per-provider clients + normalization
 retrieval/keywords.py   salient-term extraction per provider query language
 retrieval/fusion.py     RRF scoring, corroboration, expansion trigger
 retrieval/enrichment.py openalex DOI-singleton citation counts
-fulltext/resolver.py    OA full-text resolution (Europe PMC XML / arXiv / Unpaywall)
+fulltext/resolver.py    OA full-text resolution (Europe PMC XML / arXiv)
 fulltext/pdftext.py     bounded, failure-tolerant PDF text extraction
 synth/                router client (primary) + inline chain (contingency)
 synthesis.py          citation parsing and post-check
