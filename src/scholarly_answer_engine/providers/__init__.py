@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import logging
-from typing import Callable
+from collections.abc import Callable
 
 from ..config import Config
 from ..models import Work

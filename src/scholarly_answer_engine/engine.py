@@ -104,7 +104,7 @@ class AnswerEngine:
 
         answer = self._synthesise(question, selected, follow_up)
         answer = add_citation_numbers(answer, selected)
-        claims, warnings = post_check(answer, selected)
+        _claims, warnings = post_check(answer, selected)
 
         # Build citation objects before cross-validation so we can map
         # claim citations back to source works.
@@ -114,7 +114,7 @@ class AnswerEngine:
         # underlying full-text sources and count distinct engines that agree.
         # This replaces the old snippet-level count with actual textual
         # corroboration.
-        answer, claims, summary = augment_with_corroboration(
+        answer, _claims, summary = augment_with_corroboration(
             answer, citation_list, selected
         )
 

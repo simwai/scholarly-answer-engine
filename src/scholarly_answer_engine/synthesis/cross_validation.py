@@ -30,7 +30,6 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Dict, List, Set
 
 from ..models import Citation, Work
 
@@ -58,7 +57,7 @@ class CorroborationSummary:
     single_source_claims: int
     contradicted_claims: int
     corroboration_percentage: float
-    engine_agreement: Dict[str, int]
+    engine_agreement: dict[str, int]
     providers_active: int = 0
 
 
@@ -106,7 +105,6 @@ _SENTENCE = re.compile(r"(?<=[.!?])\s+(?=[A-Z])")
 
 def extract_claims(answer: str, citations: list[Citation]) -> list[ClaimEvidence]:
     """Split the answer into sentences and attach the citation numbers each uses."""
-    citation_ids = {c.index: c for c in citations}
     claims: list[ClaimEvidence] = []
 
     for sentence in _SENTENCE.split(answer.strip()):
@@ -214,9 +212,9 @@ def _work_matches_citation(work: Work, citation: Citation) -> bool:
         return True
     if citation.arxiv_id and work.arxiv_id and citation.arxiv_id.lower() == work.arxiv_id.lower():
         return True
-    if citation.title and work.title and citation.title.strip().lower() == work.title.strip().lower():
-        return True
-    return False
+    return bool(
+        citation.title and work.title and citation.title.strip().lower() == work.title.strip().lower()
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -234,7 +232,7 @@ def build_corroboration_summary(
     single_source_count = sum(1 for c in claims if c.single_source and not c.corroborated)
     contradicted_count = sum(1 for c in claims if c.contradiction)
 
-    engine_agreement: Dict[str, int] = {}
+    engine_agreement: dict[str, int] = {}
     for claim in claims:
         for engine in claim.corroboration_sources:
             engine_agreement[engine] = engine_agreement.get(engine, 0) + 1
