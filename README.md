@@ -53,9 +53,14 @@ each claim is visible.
 ## Setup
 
 ```bash
-pip install -e ".[dev]"
-cp .env.example .env      # all defaults work without edits
-python -m pytest tests   # 87 tests; 4 need RUN_LIVE_TESTS=1 for live model checks
+# Install PDM package manager (if not already installed)
+pip install pdm
+
+# Install dependencies from pyproject.toml
+pdm install
+
+# Copy .env.example to .env and edit if needed (all defaults work without edits)
+cp .env.example .env
 ```
 
 Add to an MCP client:
@@ -64,9 +69,12 @@ Add to an MCP client:
 {
   "mcpServers": {
     "scholarly-answer-engine": {
-      "command": "python",
-      "args": ["-m", "scholarly_answer_engine"],
-      "env": { "SEARCH_CONTACT_EMAIL": "you@example.com" }
+      "command": "pdm",
+      "args": ["run", "python", "-m", "scholarly_answer_engine"],
+      "env": {
+        "PYTHONPATH": "src",
+        "SEARCH_CONTACT_EMAIL": "you@example.com"
+      }
     }
   }
 }
@@ -96,8 +104,10 @@ to call providers directly from Python.
 ## Running
 
 ```bash
-python -m scholarly_answer_engine            # stdio MCP server
-python -m pytest tests                      # 84 tests (3 skip unless RUN_LIVE_TESTS=1)
+pdm run python -m scholarly_answer_engine     # stdio MCP server (recommended via PDM)
+pdm run test                                    # 89 tests; 4 need RUN_LIVE_TESTS=1 for live model checks
+pdm run typecheck                               # pyrefly type check
+pdm run lint                                    # ruff lint check
 npx @modelcontextprotocol/inspector python -m scholarly_answer_engine
 ```
 
@@ -196,6 +206,6 @@ normalize.py          DOI / arXiv ID / title-fingerprint identity and merge
 
 ## Tests
 
-62 tests, no network: identity normalisation and cross-provider merging, RRF
+89 tests, no network: identity normalisation and cross-provider merging, RRF
 fusion and the expansion trigger, citation post-check, cache TTL behaviour,
 provider parsing against fixtures, and bounded PDF extraction.
